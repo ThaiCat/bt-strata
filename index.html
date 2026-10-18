@@ -147,18 +147,18 @@ for(let l=0;l<LANES.length;l++){
 const buildings = [];
 function addTower(team, lane, f){
   const p = atFraction(lane, f, (team===BLUE? -74 : 74));
-  buildings.push({ kind:'tower', team, x:p.x, y:p.y, r:26, hp:1500, maxHp:1500, dmg:32, range:350, cd:1.15, cdt:0, arm:32, alive:true, spin:0 });
+  buildings.push({ kind:'tower', team, x:p.x, y:p.y, r:26, hp:1250, maxHp:1250, dmg:32, range:350, cd:1.15, cdt:0, arm:30, alive:true, spin:0 });
 }
 for(let l=0;l<LANES.length;l++){ addTower(BLUE,l,0.36); addTower(RED,l,0.64); }
 const bases = [];
 for(let t=0;t<2;t++){
-  const b = buildings.push({ kind:'base', team:t, x:BASE_POS[t].x, y:BASE_POS[t].y, r:64, hp:4200, maxHp:4200, dmg:40, range:430, cd:1.1, cdt:0, arm:80, alive:true, spin:0 }) - 1;
+  const b = buildings.push({ kind:'base', team:t, x:BASE_POS[t].x, y:BASE_POS[t].y, r:64, hp:3600, maxHp:3600, dmg:40, range:430, cd:1.1, cdt:0, arm:76, alive:true, spin:0 }) - 1;
   bases.push(buildings[b]);
   // base defense cannons
   for(let k=0;k<2;k++){
     const a = (t===BLUE? -Math.PI/2 : Math.PI/2) + (k?0.9:-0.9);
     buildings.push({ kind:'tower', team:t, x:BASE_POS[t].x+Math.cos(a)*105, y:BASE_POS[t].y+Math.sin(a)*105,
-      r:22, hp:950, maxHp:950, dmg:28, range:330, cd:1.15, cdt:0, arm:68, alive:true, spin:0 });
+      r:22, hp:800, maxHp:800, dmg:28, range:330, cd:1.15, cdt:0, arm:65, alive:true, spin:0 });
   }
 }
 
@@ -170,7 +170,7 @@ let   killLog = [];
 let   waveNo = 0, waveTimer = 3, gameTime = 0, over = 0, paused = false;
 const morale = [ {atk:1,dmg:1}, {atk:1,dmg:1} ];
 const DIFF = 0;      // 0 = mirror waves (the hero is the X factor), 1/2 = red gets bonus creeps
-const AI_HERO = 0.82; // the enemy hero is tuned weaker than yours, so playing well is how you win
+const AI_HERO = 0.7;  // the enemy hero is tuned weaker than yours, so playing well is how you win
 
 /* ------------------------------------------------------------------ spawn -- */
 let uid = 1;
@@ -635,7 +635,7 @@ function aiHeroThink(dt){
     const d=hypot(h.x-u.x,h.y-u.y);
     if(u.team!==h.team){ if(d<190) foes++; } else if(d<210) pals++;
   }
-  const hurt = h.hp < h.maxHp*0.36;
+  const hurt = (h.hp < h.maxHp*0.42 && pals===0) || (foes >= pals+3 && h.hp < h.maxHp*0.7);
   // attack the closest enemy; otherwise push down the lane like a creep does
   let best=null, bd=1e18;
   forEachNear(h, v=>{
@@ -653,9 +653,11 @@ function aiHeroThink(dt){
   }
   if(best){
     const reach = h.range + h.r + best.r;
-    if(hurt && pals===0){                    // wounded and alone: back off toward the last owned point
-      const path2 = PATHS[h.team][h.lane];
-      moveToward(h, path2[0][0], path2[0][1], h.spd*dt);
+    if(hurt){                      // outnumbered or wounded: fall back to the owned point behind it
+      let bx=BASE_POS[h.team].x, by=BASE_POS[h.team].y, bd2=1e18;
+      for(const p of points){ if(p.owner!==h.team) continue;
+        const q=hypot(p.x,h.x,p.y,h.y); if(q>120 && q<bd2){ bd2=q; bx=p.x; by=p.y; } }
+      moveToward(h, bx, by, h.spd*dt);
     }
     else if(bd>reach) moveToward(h, best.x, best.y, h.spd*dt);
   } else {
